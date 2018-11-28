@@ -1,38 +1,36 @@
 # profile script
 
-# Set-up Shell Window and Colors
-$PowerShellTerminalUI = (Get-Host).UI.RawUI
-$PowerShellTerminalUI.ForegroundColor = 'White'
-$PowerShellTerminalUI.BackgroundColor = 'Black'
-$PowerShellTerminalUI.WindowTitle = 'PS(5.1\Windows)'
-$PowershellTerminalBufferNewSize = $PowerShellTerminalUI.buffersize
-$PowershellTerminalBufferNewSize.Height = 1024
-$PowershellTerminalBufferNewSize.Width = 512
-$PowerShellTerminalUI.BufferSize = $PowershellTerminalBufferNewSize
+[CmdletBinding()]
 
-# Change the colors for the progress bar
-$Host.PrivateData.ProgressForegroundColor = "Black"
-$Host.PrivateData.ProgressBackgroundColor = "White"
+param (
 
-# Change the default colors for Warnings, Errors, and Verbose Messages
-$Host.PrivateData.WarningBackgroundColor = "Black"
-$Host.PrivateData.WarningForegroundColor = "Yellow"
-$Host.PrivateData.VerboseBackgroundColor = "Black"
-$Host.PrivateData.VerboseForegroundColor = "DarkCyan"
-$Host.PrivateData.ErrorBackgroundColor = "Black"
-$Host.PrivateData.ErrorForegroundColor = "Red"
-$Host.PrivateData.DebugBackgroundColor = "Black"
-$Host.PrivateData.DebugForegroundColor = "Gray"
+)
 
-$FormatEnumerationLimit = -1
+# Allows more items to be displayed when a property contains more than one value: https://blogs.technet.microsoft.com/heyscriptingguy/2011/11/20/change-a-powershell-preference-variable-to-reveal-hidden-data/.
+$FormatEnumerationLimit = 8
 
-# clear the screen to 'apply' above changes.
-Clear-Host
+$currentPrincipal = New-Object -ErrorAction Stop -TypeName Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$UserIsAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+$userRole = $null
+
+if ($false -eq $UserIsAdmin) {
+
+    $userRole = 'User', 'White'
+
+}
+else {
+
+    Write-Host -ForegroundColor Yellow "[$($MyInvocation.MyCommand.Name)]: Session is running with administrator privileges."
+
+    $userRole = 'Administrator', 'Yellow'
+    
+}
 
 function prompt {
 
     # set Window Title
-    $host.UI.RawUI.WindowTitle = "$ENV:USERNAME@$ENV:COMPUTERNAME - $(Get-Location)"
+    $host.UI.RawUI.WindowTitle = "$env:UserDomain\$env:UserName - $(Get-Location)"
 
     # Next Command
     $history = @(Get-History)
@@ -46,16 +44,19 @@ function prompt {
     $nextCommand = $lastId + 1
 
     Write-Host (Get-Date -Format "yyyy/MM/dd HH:mm:ss") -NoNewline -ForegroundColor Cyan
-    Write-Host "::" -NoNewline -ForegroundColor White
-    Write-Host "$ENV:USERNAME@$ENV:COMPUTERNAME" -ForegroundColor Cyan
+    Write-Host '::' -NoNewline
+    Write-Host "$env:ComputerName" -NoNewline
+    Write-Host '::' -NoNewline
+    Write-Host "$env:UserDomain\$env:UserName" -ForegroundColor Cyan -NoNewline
+    Write-Host -ForegroundColor $userRole[1] " ($($userRole[0]))"
 
     $currentLocation = Get-Location
 
     Write-Host -ForegroundColor Yellow -Object $currentLocation.Provider.Name -NoNewline
-    Write-Host "::" -NoNewline -ForegroundColor White
+    Write-Host "::" -NoNewline
     Write-Host -ForegroundColor Cyan -Object $currentLocation.Path -NoNewline
 
-    Write-Host ":$($nextCommand)>" -NoNewline -ForegroundColor White
+    Write-Host ":$($nextCommand)>" -NoNewline
 
     return " "
 }
